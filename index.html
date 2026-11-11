@@ -144,10 +144,6 @@ textarea{width:100%;min-height:300px;resize:vertical;padding:12px;border:1px sol
 .modal input{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);width:100%}
 .modal .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .modal .err{color:var(--danger);font-size:14px;margin:0}
-.bm{border-top:1px solid var(--line);padding-top:10px}
-.bm summary{cursor:pointer;font-size:14px;color:var(--muted)}
-.bm[open] summary{margin-bottom:8px}
-.bm .hint{margin:0 0 8px}
 .gate{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px}
 .gate.open{display:flex}
 .gate .box{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -213,15 +209,10 @@ textarea{width:100%;min-height:300px;resize:vertical;padding:12px;border:1px sol
 
 <div class="modal" id="importModal"><form class="box" id="importForm">
   <h2>Linkten ekle</h2>
-  <p class="hint">Ultimate Guitar, akorlar.com, repertuarim.com ya da akorların düz metin olarak durduğu bir sayfanın linkini yapıştır. Sonra düzenleyip kaydedersin.</p>
-  <input id="importUrl" type="url" inputmode="url" placeholder="https://…" autocomplete="off" required>
+  <p class="hint">Desteklenen siteler: <b>Ultimate Guitar</b> ve <b>repertuarim.com</b>. Şarkının akor sayfasının linkini yapıştır; akorlar düzenleyicide açılır, düzenleyip kaydedersin. Diğer sitelerden akorları kopyalayıp <b>+ Yapıştır</b> ile ekleyebilirsin.</p>
+  <input id="importUrl" type="url" inputmode="url" placeholder="https://tabs.ultimate-guitar.com/… veya https://www.repertuarim.com/akor/…" autocomplete="off" required>
   <p class="err" id="importErr" hidden></p>
   <div class="row"><button class="btn" type="button" id="importCancel">Vazgeç</button><button class="btn primary" type="submit" id="importGo">Getir</button></div>
-  <details class="bm"><summary>Site engelliyorsa: yer imi butonu (akorlar.com için)</summary>
-    <p class="hint">Bazı siteler (ör. akorlar.com) sunucumuzun erişimini engelliyor. Bu butonu yer imlerine ekle; şarkı sayfasındayken ona basınca akorlar senin tarayıcından okunur ve burada düzenleyicide açılır.</p>
-    <p class="hint"><b>Bilgisayar:</b> aşağıdaki butonu yer imleri çubuğuna sürükle.<br><b>Telefon:</b> “Kodu kopyala”ya bas, herhangi bir sayfayı yer imlerine ekle, sonra o yer iminin adresini kopyaladığın kodla değiştir.</p>
-    <div class="row" style="justify-content:flex-start"><a class="btn primary" id="bmLink" href="#">🎸 Akor Defteri'ne gönder</a><button class="btn" type="button" id="bmCopy">Kodu kopyala</button></div>
-  </details>
 </form></div>
 
 <div class="gate" id="gate"><div class="box">
@@ -536,7 +527,7 @@ function renderPane(){
   const s=getSong(st.currentId);
   if(!s){
     $("#dock").hidden=true;
-    pane.innerHTML='<div class="welcome"><p><b>Akor Defteri</b></p><p><b>🔗 Linkten</b>: Ultimate Guitar, akorlar.com ya da repertuarim.com linkini yapıştır, akorlar gelsin.</p><p><b>+ Yapıştır</b>: herhangi bir yerden kopyaladığın akorları ekle.</p><p>Tonu − / + ile değiştir; seçtiğin ton, kapo ve kaydırma hızı kendiliğinden kaydedilir.</p></div>';
+    pane.innerHTML='<div class="welcome"><p><b>Akor Defteri</b></p><p><b>🔗 Linkten</b>: Ultimate Guitar ya da repertuarim.com linkini yapıştır, akorlar gelsin.</p><p><b>+ Yapıştır</b>: herhangi bir yerden kopyaladığın akorları ekle.</p><p>Tonu − / + ile değiştir; seçtiğin ton, kapo ve kaydırma hızı kendiliğinden kaydedilir.</p></div>';
     return;
   }
   const tags=songTags(s);
@@ -740,40 +731,18 @@ function openImport(){
   $("#importErr").hidden=true; $("#importUrl").value=""; $("#importModal").classList.add("open");
   setTimeout(()=>$("#importUrl").focus(),30);
   if(navigator.clipboard&&navigator.clipboard.readText){
-    navigator.clipboard.readText().then(t=>{ if(/^https?:\/\//.test((t||"").trim())&&!$("#importUrl").value) $("#importUrl").value=t.trim(); }).catch(()=>{});
+    navigator.clipboard.readText().then(t=>{ t=(t||"").trim(); if(SUPPORTED.test(t)&&!$("#importUrl").value) $("#importUrl").value=t; }).catch(()=>{});
   }
 }
 function closeImport(){$("#importModal").classList.remove("open")}
-const BOOKMARKLET="javascript:(function(){var p=[].slice.call(document.querySelectorAll('pre')).sort(function(a,b){return b.innerText.length-a.innerText.length})[0];if(!p||p.innerText.trim().length<20){alert('Bu sayfada akor bulunamadı.');return}var h=document.querySelector('h1');var d={t:p.innerText,h:(h?h.innerText:document.title),u:location.href};window.open('https://gitar.rabialiberk.com/#ice-aktar='+encodeURIComponent(JSON.stringify(d)),'_blank')})()";
-$("#bmLink").setAttribute("href",BOOKMARKLET);
-$("#bmLink").addEventListener("click",e=>{e.preventDefault();toast("Bu butonu yer imleri çubuğuna sürükle.")});
-$("#bmCopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(BOOKMARKLET);toast("Kod kopyalandı.")}catch(e){toast("Kopyalanamadı.")}});
-function splitHeading(raw){
-  const cleaned=String(raw||"").replace(/\s+/g," ").trim().replace(/\s*[-–|]\s*(akor|akorları|chords?|tab).*$/i,"").replace(/\s*\(.*?\)\s*$/,"").trim();
-  const parts=cleaned.split(/\s+[-–]\s+/);
-  return parts.length>=2?{artist:parts[0],title:parts.slice(1).join(" - ")}:{artist:"",title:cleaned};
-}
-function takeHashImport(){
-  const m=/^#ice-aktar=(.+)$/.exec(location.hash);
-  if(m){ try{ sessionStorage.setItem("akor.pendingImport",decodeURIComponent(m[1])); }catch(e){} history.replaceState(null,"",location.pathname); }
-}
-function consumePendingImport(){
-  let raw=null; try{raw=sessionStorage.getItem("akor.pendingImport"); sessionStorage.removeItem("akor.pendingImport");}catch(e){}
-  if(!raw) return;
-  try{
-    const d=JSON.parse(raw), hd=splitHeading(d.h);
-    let host=""; try{host=new URL(d.u).hostname.replace(/^www\./,"")}catch(e){}
-    openEditor(null,{title:hd.title,artist:hd.artist,text:cleanPasted(String(d.t||"")),sourceUrl:d.u||"",source:host,capo:0,tags:[]});
-  }catch(e){toast("İçe aktarılan veri okunamadı.")}
-}
-takeHashImport();
-window.addEventListener("hashchange",()=>{takeHashImport(); if(booted) consumePendingImport();});
+const SUPPORTED=/^https?:\/\/([a-z0-9-]+\.)*(ultimate-guitar\.com|repertuarim\.com)\//i;
 $("#btnImport").addEventListener("click",openImport);
 $("#importCancel").addEventListener("click",closeImport);
 $("#importModal").addEventListener("click",e=>{if(e.target.id==="importModal") closeImport()});
 $("#importForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const url=$("#importUrl").value.trim(); if(!url) return;
+  if(!SUPPORTED.test(url)){ $("#importErr").textContent="Şimdilik yalnızca Ultimate Guitar ve repertuarim.com linkleri destekleniyor. Diğer sitelerden akorları kopyalayıp + Yapıştır ile ekleyebilirsin."; $("#importErr").hidden=false; return; }
   const dup=songs.find(s=>s.sourceUrl&&s.sourceUrl===url);
   const btn=$("#importGo"); btn.disabled=true; btn.textContent="Getiriliyor…"; $("#importErr").hidden=true;
   try{
@@ -783,7 +752,6 @@ $("#importForm").addEventListener("submit",async e=>{
     openEditor(null,r);
   }catch(err){
     $("#importErr").textContent=err.message||String(err); $("#importErr").hidden=false;
-    if(/engelledi/.test(err.message||"")) document.querySelector(".bm").open=true;
   }
   btn.disabled=false; btn.textContent="Getir";
 });
@@ -898,7 +866,6 @@ async function boot(){
   if(Array.isArray(cached)){songs=cached;loaded=true;renderAll()}
   try{
     songs=await call("list"); loaded=true; persistCache(); renderAll();
-    consumePendingImport();
   }catch(err){
     if(err.code==="auth"||err.code==="forbidden"){
       booted=false; localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(CACHE_KEY); $("#meBtn").hidden=true; showGate(err.message); return;
